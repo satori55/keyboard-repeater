@@ -38,7 +38,7 @@ def terminate_program_func():
 
 # 创建主窗口
 root = tk.Tk()
-root.iconphoto(True, tk.PhotoImage(file='D:/keyboard-repeater/clickpy/APP.png'))
+# root.iconphoto(True, tk.PhotoImage(file='./APP.png'))
 root.title("键盘自动输入")
 
 # 创建和布局GUI组件
