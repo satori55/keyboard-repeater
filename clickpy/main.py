@@ -3,7 +3,7 @@ import pyautogui
 import tkinter as tk
 from tkinter import ttk
 import threading
-from tkinterdnd2 import DND_FILES, TkinterDnD
+
 
 # 全局变量，用于标记是否终止程序
 terminate_program = False
@@ -37,8 +37,8 @@ def terminate_program_func():
     terminate_program = True
 
 # 创建主窗口
-root = TkinterDnD.Tk()
-root.iconphoto(True, tk.PhotoImage(file='APP.png'))
+root = tk.Tk()
+root.iconphoto(True, tk.PhotoImage(file='D:/keyboard-repeater/clickpy/APP.png'))
 root.title("键盘自动输入")
 
 # 创建和布局GUI组件

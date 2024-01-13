@@ -1,1 +1,7 @@
 /target
+/.vscode/
+build/
+dist/
+/clickpy/APP.png
+APP.ico
+*.spec
