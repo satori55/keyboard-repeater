@@ -1,83 +1,135 @@
-use enigo::{Enigo, KeyboardControllable};
-use std::io::{self, Write};
-use std::thread::sleep;
-use std::time::Duration;
+use iced::alignment::{Horizontal, Vertical};
+use iced::widget::{Column, Button, TextInput, Container};
+use iced::{Alignment, Element, Sandbox, Settings};
+use enigo::{Enigo, Key, KeyboardControllable};
+use std::{thread, time::Duration};
 
-fn main() {
-    loop {
-        // 创建 Enigo 实例
-        let mut enigo = Enigo::new();
+struct KeyPressApp {
+    key_input: String,
+    duration_input: String,
+    interval_input: String,
+    status_text: String,
+}
 
-        // 获取需要按下的键
-        print!("请输入需要按下的键（例如 A): ");
-        io::stdout().flush().unwrap();
-        let mut key_input = String::new();
-        io::stdin().read_line(&mut key_input).expect("无法读取输入");
+#[derive(Debug, Clone)]
+enum Message {
+    KeyInputChanged(String),
+    DurationInputChanged(String),
+    IntervalInputChanged(String),
+    StartPressed,
+}
 
-        // 检查输入是否为空
-        if key_input.trim().is_empty() {
-            println!("无效的输入，请重新输入。");
-            continue;
+impl Sandbox for KeyPressApp {
+    type Message = Message;
+
+    fn new() -> Self {
+        Self {
+            key_input: String::new(),
+            duration_input: String::new(),
+            interval_input: String::new(),
+            status_text: String::from("Ready"),
         }
+    }
 
-        // 提取输入的第一个字符
-        let key_to_press = enigo::Key::Layout(key_input.trim().chars().next().unwrap());
+    fn title(&self) -> String {
+        String::from("Key Press Simulator")
+    }
 
-        // 获取按键持续时间
-        print!("请输入按键持续时间（秒）: ");
-        io::stdout().flush().unwrap();
-        let mut duration_input = String::new();
-        io::stdin().read_line(&mut duration_input).expect("无法读取输入");
-
-        // 检查输入是否为空或无效
-        let press_duration: u64 = match duration_input.trim().parse() {
-            Ok(duration) => duration,
-            Err(_) => {
-                println!("无效的输入，请重新输入。");
-                continue;
+    fn update(&mut self, message: Message) {
+        match message {
+            Message::KeyInputChanged(input) => {
+                self.key_input = input;
+            },
+            Message::DurationInputChanged(input) => {
+                self.duration_input = input;
+            },
+            Message::IntervalInputChanged(input) => {
+                self.interval_input = input;
+            },
+            Message::StartPressed => {
+                self.start_key_press_simulation();
             }
-        };
-
-        // 获取按键间隔
-        print!("请输入按键间隔时间（毫秒）: ");
-        io::stdout().flush().unwrap();
-        let mut interval_input = String::new();
-        io::stdin().read_line(&mut interval_input).expect("无法读取输入");
-
-        // 检查输入是否为空或无效
-        let interval: u64 = match interval_input.trim().parse() {
-            Ok(interval) => interval,
-            Err(_) => {
-                println!("无效的输入，请重新输入。");
-                continue;
-            }
-        };
-
-        // 执行按键循环
-        let start_time = std::time::Instant::now();
-        while start_time.elapsed().as_secs() < press_duration {
-            // 模拟按下和释放键
-            enigo.key_down(key_to_press.clone());
-            enigo.key_up(key_to_press.clone());
-
-            // 间隔一段时间再次按键
-            sleep(Duration::from_millis(interval));
         }
+    }
 
-        // 显示运行完成
-        println!("运行完成");
+    fn view(&self) -> Element<Message> {
+        let key_text = TextInput::new("Press one key (like:\"a\")", &self.key_input)
+            .on_input(Message::KeyInputChanged)
+            .padding(5)
+            .width(300);
 
-        // // 询问是否继续下一轮
-        // println!("是否继续下一轮？(y/n): ");
+        let duration_text = TextInput::new("Input the duration time ", &self.duration_input)
+            .on_input(Message::DurationInputChanged)
+            .padding(5)
+            .width(300);
 
-        // io::stdout().flush().unwrap();
-        // let mut continue_input = String::new();
-        // io::stdin().read_line(&mut continue_input).expect("无法读取输入");
+        let interval_text = TextInput::new("Input the interval time", &self.interval_input)
+            .on_input(Message::IntervalInputChanged)
+            .padding(5)
+            .width(300);
 
-        // // 如果用户输入不是 'y'，则退出循环
-        // if continue_input.trim() != "y" {
-        //     break;
-        // }
-        break;
+        let start_button = Button::new("Button").on_press(Message::StartPressed);
+
+        Container::new(
+            Column::new()
+                .push(key_text)
+                .push(duration_text)
+                .push(interval_text)
+                .push(start_button)
+                .spacing(20) // 设置元素之间的间隙为 20 像素
+                .align_items(Alignment::Center), // 设置元素的对齐方式为居中对齐
+        )
+        .into()
     }
 }
+
+impl KeyPressApp {
+    fn start_key_press_simulation(&mut self) {
+        // Validate and parse inputs
+        let key = match self.key_input.chars().next() {
+            Some(k) => k,
+            None => {
+                self.status_text = "Invalid key input".to_string();
+                return;
+            }
+        };
+
+        let duration = match self.duration_input.parse::<u64>() {
+            Ok(d) => d,
+            Err(_) => {
+                self.status_text = "Invalid duration input".to_string();
+                return;
+            }
+        };
+
+        let interval = match self.interval_input.parse::<u64>() {
+            Ok(i) => i,
+            Err(_) => {
+                self.status_text = "Invalid interval input".to_string();
+                return;
+            }
+        };
+
+        // Start key press simulation
+        self.status_text = "Running".to_string();
+        let mut enigo = Enigo::new();
+        let start_time = std::time::Instant::now();
+
+        while start_time.elapsed().as_secs() < duration {
+            enigo.key_down(Key::Layout(key));
+            enigo.key_up(Key::Layout(key));
+            thread::sleep(Duration::from_millis(interval));
+        }
+
+        self.status_text = "Completed".to_string();
+    }
+}
+
+pub fn main() -> iced::Result {
+    KeyPressApp::run(Settings {
+        window: iced::window::Settings {
+            size: (400, 300), // 设置窗口大小为 800x600
+            ..Default::default()
+        },
+        ..Default::default()
+    })}
