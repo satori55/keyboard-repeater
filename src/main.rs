@@ -159,7 +159,7 @@ impl KeyPressApp {
 }
 
 pub fn run_app() -> iced::Result {
-    let img2=image::open("./src/APP.png");
+    let img2=image::open("./APP.png");
     let img2_path=match img2 {
         Ok(path)=>path,
         Err(error)=>panic!("error is {}",error),
