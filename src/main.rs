@@ -1,14 +1,21 @@
-use iced::alignment::{Horizontal, Vertical};
+#![windows_subsystem = "windows"]
+// use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{Column, Button, TextInput, Container};
 use iced::{Alignment, Element, Sandbox, Settings};
+use iced::window::icon;
 use enigo::{Enigo, Key, KeyboardControllable};
 use std::{thread, time::Duration};
+use std::sync::{Arc, Mutex};
+use image;
 
 struct KeyPressApp {
     key_input: String,
     duration_input: String,
     interval_input: String,
     status_text: String,
+    is_running: Arc<Mutex<bool>>,
+    receiver: Option<std::sync::mpsc::Receiver<Message>>, // Add this line
+
 }
 
 #[derive(Debug, Clone)]
@@ -17,6 +24,8 @@ enum Message {
     DurationInputChanged(String),
     IntervalInputChanged(String),
     StartPressed,
+    StopPressed,
+    SimulationEnded,
 }
 
 impl Sandbox for KeyPressApp {
@@ -28,6 +37,8 @@ impl Sandbox for KeyPressApp {
             duration_input: String::new(),
             interval_input: String::new(),
             status_text: String::from("Ready"),
+            is_running: Arc::new(Mutex::new(true)),
+            receiver: None,
         }
     }
 
@@ -48,7 +59,14 @@ impl Sandbox for KeyPressApp {
             },
             Message::StartPressed => {
                 self.start_key_press_simulation();
-            }
+            },
+            Message::StopPressed => {
+                *self.is_running.lock().unwrap() = false;
+                self.status_text = "Stopped".to_string();
+            },
+            Message::SimulationEnded => {
+                self.status_text = "Simulation Completed".to_string();
+            },
         }
     }
 
@@ -68,7 +86,10 @@ impl Sandbox for KeyPressApp {
             .padding(5)
             .width(300);
 
-        let start_button = Button::new("Button").on_press(Message::StartPressed);
+        let start_button = Button::new("Start").on_press(Message::StartPressed);
+        let stop_button = Button::new("Stop")
+        .on_press(Message::StopPressed)
+        .padding(5);
 
         Container::new(
             Column::new()
@@ -76,6 +97,7 @@ impl Sandbox for KeyPressApp {
                 .push(duration_text)
                 .push(interval_text)
                 .push(start_button)
+                .push(stop_button)
                 .spacing(20) // 设置元素之间的间隙为 20 像素
                 .align_items(Alignment::Center), // 设置元素的对齐方式为居中对齐
         )
@@ -110,26 +132,57 @@ impl KeyPressApp {
             }
         };
 
-        // Start key press simulation
-        self.status_text = "Running".to_string();
-        let mut enigo = Enigo::new();
-        let start_time = std::time::Instant::now();
+            // 使用新线程来运行按键模拟
+            let (sender, receiver) = std::sync::mpsc::channel::<Message>();
+            let is_running = Arc::new(Mutex::new(true)); // Set is_running to true
 
-        while start_time.elapsed().as_secs() < duration {
-            enigo.key_down(Key::Layout(key));
-            enigo.key_up(Key::Layout(key));
-            thread::sleep(Duration::from_millis(interval));
-        }
-
-        self.status_text = "Completed".to_string();
+            let is_running_clone = Arc::clone(&is_running);
+            std::thread::spawn(move || {
+                let mut enigo = Enigo::new();
+                let start_time = std::time::Instant::now();
+    
+                while start_time.elapsed().as_secs() < duration {
+                    if !*is_running_clone.lock().unwrap() {
+                        break; // 检查是否需要提前终止
+                    }
+    
+                    enigo.key_down(Key::Layout(key));
+                    enigo.key_up(Key::Layout(key));
+                    thread::sleep(Duration::from_millis(interval));
+                }
+    
+                sender.send(Message::SimulationEnded).unwrap(); // 发送模拟结束的消息
+            });
+            self.is_running = is_running; // Share is_running between threads
+            self.receiver = Some(receiver);
     }
 }
 
-pub fn main() -> iced::Result {
+pub fn run_app() -> iced::Result {
+    let img2=image::open("./src/APP.png");
+    let img2_path=match img2 {
+        Ok(path)=>path,
+        Err(error)=>panic!("error is {}",error),
+    };
+    let img2_file=img2_path.to_rgba8();
+    let ico2=icon::from_rgba(img2_file.to_vec(), 1000, 1000);
+    let ico2_file=match ico2{
+        Ok(file)=>file,
+        Err(error)=>panic!("error is {}",error),
+    };
+
     KeyPressApp::run(Settings {
         window: iced::window::Settings {
             size: (400, 300), // 设置窗口大小为 800x600
+            icon: Some(ico2_file),
             ..Default::default()
         },
         ..Default::default()
     })}
+
+pub fn main() {
+    match run_app() {
+        Ok(_) => println!("Application exited successfully"),
+        Err(e) => eprintln!("Application exited with error: {:?}", e),
+    }
+}
