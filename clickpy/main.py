@@ -9,7 +9,8 @@ import threading
 terminate_program = False
 running_thread = None  # 用于跟踪运行的线程
 
-def send_continuous_key(key, duration=1, interval=0.05):
+
+def send_continuous_key(key: str, duration: int = 1, interval: float = 0.05) -> None:
     """
     模拟连续按键
     :param key: 要模拟的按键
@@ -22,8 +23,9 @@ def send_continuous_key(key, duration=1, interval=0.05):
         pyautogui.press(key)
         time.sleep(interval)
 
+
 # 后台运行程序的函数
-def run_program():
+def run_program() -> None:
     global terminate_program
     key = key_entry.get()
     duration = int(duration_entry.get())
@@ -31,10 +33,12 @@ def run_program():
     terminate_program = False  # 重置终止标志
     send_continuous_key(key, duration=duration, interval=interval)
 
+
 # 终止程序的函数
-def terminate_program_func():
+def terminate_program_func() -> None:
     global terminate_program
     terminate_program = True
+
 
 # 创建主窗口
 root = tk.Tk()
@@ -60,8 +64,9 @@ interval_label.grid(row=2, column=0, padx=10, pady=10, sticky="w")
 interval_entry = ttk.Entry(root)
 interval_entry.grid(row=2, column=1, padx=10, pady=10)
 
+
 # 添加开始按钮
-def start_button_callback():
+def start_button_callback() -> None:
     global running_thread
     if running_thread and running_thread.is_alive():
         # 如果线程仍在运行，说明正在输入数字，不执行任何操作
@@ -70,6 +75,7 @@ def start_button_callback():
         # 启动新线程运行程序
         running_thread = threading.Thread(target=run_program)
         running_thread.start()
+
 
 start_button = ttk.Button(root, text="开始", command=start_button_callback)
 start_button.grid(row=3, column=0, columnspan=2, pady=10)

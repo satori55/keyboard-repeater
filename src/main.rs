@@ -61,7 +61,10 @@ impl Sandbox for KeyPressApp {
                 self.start_key_press_simulation();
             },
             Message::StopPressed => {
-                *self.is_running.lock().unwrap() = false;
+                match self.is_running.lock() {
+                    Ok(mut run_statue) => *run_statue = false,
+                    Err(e) => eprintln!("Failed to update: {}", e),
+                }
                 self.status_text = "Stopped".to_string();
             },
             Message::SimulationEnded => {
@@ -170,10 +173,10 @@ pub fn run_app() -> iced::Result {
         Ok(file)=>file,
         Err(error)=>panic!("error is {}",error),
     };
-
+    
     KeyPressApp::run(Settings {
         window: iced::window::Settings {
-            size: (400, 300), // 设置窗口大小为 800x600
+            size: (300, 300), // 设置窗口大小为 800x600
             icon: Some(ico2_file),
             ..Default::default()
         },
