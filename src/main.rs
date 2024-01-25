@@ -135,29 +135,29 @@ impl KeyPressApp {
             }
         };
 
-            // 使用新线程来运行按键模拟
-            let (sender, receiver) = std::sync::mpsc::channel::<Message>();
-            let is_running = Arc::new(Mutex::new(true)); // Set is_running to true
+        // 使用新线程来运行按键模拟
+        let (sender, receiver) = std::sync::mpsc::channel::<Message>();
+        let is_running = Arc::new(Mutex::new(true)); // Set is_running to true
 
-            let is_running_clone = Arc::clone(&is_running);
-            std::thread::spawn(move || {
-                let mut enigo = Enigo::new();
-                let start_time = std::time::Instant::now();
-    
-                while start_time.elapsed().as_secs() < duration {
-                    if !*is_running_clone.lock().unwrap() {
-                        break; // 检查是否需要提前终止
-                    }
-    
-                    enigo.key_down(Key::Layout(key));
-                    enigo.key_up(Key::Layout(key));
-                    thread::sleep(Duration::from_millis(interval));
+        let is_running_clone = Arc::clone(&is_running);
+        std::thread::spawn(move || {
+            let mut enigo = Enigo::new();
+            let start_time = std::time::Instant::now();
+
+            while start_time.elapsed().as_secs() < duration {
+                if !*is_running_clone.lock().unwrap() {
+                    break; // 检查是否需要提前终止
                 }
-    
-                sender.send(Message::SimulationEnded).unwrap(); // 发送模拟结束的消息
-            });
-            self.is_running = is_running; // Share is_running between threads
-            self.receiver = Some(receiver);
+
+                enigo.key_down(Key::Layout(key));
+                enigo.key_up(Key::Layout(key));
+                thread::sleep(Duration::from_millis(interval));
+            }
+
+            sender.send(Message::SimulationEnded).unwrap(); // 发送模拟结束的消息
+        });
+        self.is_running = is_running; // Share is_running between threads
+        self.receiver = Some(receiver);
     }
 }
 
